@@ -1,32 +1,8 @@
 
-function filterPhotos(selectedTags) {
-  return photos.filter(photo => {
-    // Фото показываем, если у него есть хотя бы один выбранный тег
-    return selectedTags.length === 0 || 
-           selectedTags.some(tag => photo.tags.includes(tag));
-  });
-}
-
-// Сохраняем выбранные теги в URL
-function updateURL(tags) {
-  const params = new URLSearchParams(window.location.search);
-  params.set('tags', tags.join(','));
-  window.history.replaceState({}, '', `?${params.toString()}`);
-}
-
-// При загрузке читаем из URL
-function loadFromURL() {
-  const params = new URLSearchParams(window.location.search);
-  const tags = params.get('tags') ? params.get('tags').split(',') : [];
-  return tags;
-}
-
-
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. Загружаем данные
-    const photos =  [
-  
-  {
+    // 1. Данные фотографий 
+    const photos = [
+        {
     id: 1,
     url: 'images/1.jpeg',
     title: 'Город ночью',
@@ -166,8 +142,7 @@ document.addEventListener('DOMContentLoaded', function() {
     tags: ['туман', 'утро', 'пейзаж'],
     category: 'пейзаж'
   }
-  
-]; // массив фото
+    ];
     
     // 2. Получаем все уникальные теги
     const allTags = [...new Set(photos.flatMap(p => p.tags))];
@@ -182,46 +157,20 @@ document.addEventListener('DOMContentLoaded', function() {
         tagsContainer.appendChild(button);
     });
     
-    // 4. Показываем все фото
-    renderPhotos(photos);
-    setupModal();
-    
-    // 5. Добавляем обработчики кликов на теги
-    document.querySelectorAll('.tag-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            this.classList.toggle('active');
-            applyFilters();
-        });
-    });
-    
-    // 6. Кнопка сброса
-    document.getElementById('clear-filters').addEventListener('click', function() {
-        document.querySelectorAll('.tag-btn.active').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        applyFilters();
-    });
-    
-    function applyFilters() {
-        // Получаем выбранные теги
-        const selectedTags = Array.from(document.querySelectorAll('.tag-btn.active'))
-            .map(btn => btn.dataset.tag);
-        
-        // Фильтруем фото
-        const filtered = selectedTags.length === 0 
-            ? photos 
-            : photos.filter(p => p.tags.some(tag => selectedTags.includes(tag)));
-        
-        // Показываем результат
-        renderPhotos(filtered);
-        
-        // Сохраняем в URL
-        updateURL(selectedTags);
-    }
-    
+    // 4. Функция рендера фото
     function renderPhotos(photosToShow) {
         const gallery = document.querySelector('.gallery');
         gallery.innerHTML = '';
+        
+        if (photosToShow.length === 0) {
+            gallery.innerHTML = `
+                <div class="no-results">
+                    <p>Фотографий по выбранным тегам не найдено</p>
+                    <p>Попробуйте другие фильтры</p>
+                </div>
+            `;
+            return;
+        }
         
         photosToShow.forEach(photo => {
             const item = document.createElement('div');
@@ -237,27 +186,108 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             gallery.appendChild(item);
         });
+        
+        // Обновляем счетчик
+        updateCounter(photosToShow.length);
     }
     
+    // 5. Функция обновления счетчика
+    function updateCounter(count) {
+        let counter = document.querySelector('.photos-counter');
+        if (!counter) {
+            counter = document.createElement('div');
+            counter.className = 'photos-counter';
+            document.querySelector('.filters').appendChild(counter);
+        }
+        counter.textContent = `Найдено фотографий: ${count}`;
+    }
+    
+    // 6. Функция применения фильтров
+    function applyFilters() {
+        const selectedTags = Array.from(document.querySelectorAll('.tag-btn.active'))
+            .map(btn => btn.dataset.tag);
+        
+        const filtered = selectedTags.length === 0 
+            ? photos 
+            : photos.filter(p => p.tags.some(tag => selectedTags.includes(tag)));
+        
+        renderPhotos(filtered);
+        updateURL(selectedTags);
+    }
+    
+    // 7. Функция обновления URL
     function updateURL(tags) {
-        // Реализация выше
+        const params = new URLSearchParams(window.location.search);
+        
+        if (tags.length > 0) {
+            params.set('tags', tags.join(','));
+        } else {
+            params.delete('tags');
+        }
+        
+        // Создаем новую историю без перезагрузки страницы
+        const newURL = params.toString() ? `?${params.toString()}` : window.location.pathname;
+        window.history.replaceState({}, '', newURL);
+        
+        // Добавляем в заголовок для удобства
+        updateTitle(tags);
     }
-});
-
-
-
-function setupModal() {
-    const modal = document.querySelector('.modal');
-    const modalImage = document.querySelector('.modal-image');
-    const modalTitle = document.querySelector('.modal-title');
-    const modalTags = document.querySelector('.modal-tags');
-    const closeBtn = document.querySelector('.close');
     
-    document.querySelectorAll('.photo-item').forEach(item => {
-        item.addEventListener('click', function() {
-            const img = this.querySelector('img');
-            const title = this.querySelector('h4').textContent;
-            const tags = this.querySelectorAll('.photo-tags span');
+    // 8. Функция обновления заголовка вкладки
+    function updateTitle(tags) {
+        if (tags.length > 0) {
+            document.title = `Фотогалерея | Фильтры: ${tags.join(', ')}`;
+        } else {
+            document.title = 'Фотогалерея | Все фото';
+        }
+    }
+    
+    // 9. Функция загрузки фильтров из URL
+    function loadFiltersFromURL() {
+        const params = new URLSearchParams(window.location.search);
+        const tagsParam = params.get('tags');
+        
+        if (tagsParam) {
+            return tagsParam.split(',');
+        }
+        return [];
+    }
+    
+    // 10. Функция восстановления фильтров из URL
+    function restoreFiltersFromURL() {
+        const savedTags = loadFiltersFromURL();
+        
+        if (savedTags.length > 0) {
+            // Активируем соответствующие кнопки
+            document.querySelectorAll('.tag-btn').forEach(btn => {
+                if (savedTags.includes(btn.dataset.tag)) {
+                    btn.classList.add('active');
+                }
+            });
+            applyFilters(); // Применяем фильтры
+        } else {
+            renderPhotos(photos); // Показываем все фото
+        }
+        
+        updateTitle(savedTags);
+    }
+    
+    // 11. Функция настройки модального окна
+    function setupModal() {
+        const modal = document.querySelector('.modal');
+        const modalImage = document.querySelector('.modal-image');
+        const modalTitle = document.querySelector('.modal-title');
+        const modalTags = document.querySelector('.modal-tags');
+        const closeBtn = document.querySelector('.close');
+        
+        // Делегирование событий для динамических элементов
+        document.querySelector('.gallery').addEventListener('click', function(e) {
+            const photoItem = e.target.closest('.photo-item');
+            if (!photoItem) return;
+            
+            const img = photoItem.querySelector('img');
+            const title = photoItem.querySelector('h4').textContent;
+            const tags = photoItem.querySelectorAll('.photo-tags span');
             
             modalImage.src = img.src;
             modalTitle.textContent = title;
@@ -265,15 +295,84 @@ function setupModal() {
             
             modal.classList.remove('hidden');
         });
-    });
-    
-    closeBtn.addEventListener('click', () => {
-        modal.classList.add('hidden');
-    });
-    
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
+        
+        closeBtn.addEventListener('click', () => {
             modal.classList.add('hidden');
-        }
-    });
-}
+        });
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.add('hidden');
+            }
+        });
+        
+        // Закрытие по клавише Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+                modal.classList.add('hidden');
+            }
+        });
+    }
+    
+    // 12. Функция копирования URL с фильтрами
+    function setupShareButton() {
+        const shareBtn = document.createElement('button');
+        shareBtn.id = 'share-url';
+        shareBtn.textContent = 'Копировать ссылку с фильтрами';
+        shareBtn.className = 'share-btn';
+        
+        document.querySelector('.filters').appendChild(shareBtn);
+        
+        shareBtn.addEventListener('click', function() {
+            const currentURL = window.location.href;
+            
+            navigator.clipboard.writeText(currentURL).then(() => {
+                const originalText = shareBtn.textContent;
+                shareBtn.textContent = 'Ссылка скопирована!';
+                shareBtn.style.background = '#4CAF50';
+                
+                setTimeout(() => {
+                    shareBtn.textContent = originalText;
+                    shareBtn.style.background = '';
+                }, 2000);
+            }).catch(err => {
+                console.error('Ошибка копирования: ', err);
+                shareBtn.textContent = 'Ошибка копирования';
+                setTimeout(() => {
+                    shareBtn.textContent = 'Копировать ссылку с фильтрами';
+                }, 2000);
+            });
+        });
+    }
+    
+    // 13. Инициализация при загрузке страницы
+    function init() {
+        // Восстанавливаем фильтры из URL
+        restoreFiltersFromURL();
+        
+        // Настраиваем модальное окно
+        setupModal();
+        
+        // Добавляем кнопку "Поделиться"
+        setupShareButton();
+        
+        // Обработчики для кнопок тегов
+        document.querySelectorAll('.tag-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.classList.toggle('active');
+                applyFilters();
+            });
+        });
+        
+        // Кнопка сброса фильтров
+        document.getElementById('clear-filters').addEventListener('click', function() {
+            document.querySelectorAll('.tag-btn.active').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            applyFilters();
+        });
+    }
+    
+    // Запускаем инициализацию
+    init();
+});
