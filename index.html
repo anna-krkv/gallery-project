@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Фотогалерея</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <header>
+        <h1>Моя фотогалерея</h1>
+    </header>
+    
+    <main>
+        <!-- Фильтры -->
+        <div class="filters">
+            <div class="tags-filter">
+                <h3>Теги:</h3>
+                <div class="tags-container">
+                    <!-- Теги через JS -->
+                </div>
+                <button id="clear-filters">Сбросить фильтры</button>
+            </div>
+        </div>
+        
+        <!-- Галерея -->
+        <div class="gallery">
+            <!-- Фото через JS -->
+        </div>
+        
+        <!-- Модальное окно для просмотра -->
+        <div class="modal hidden">
+            <span class="close">&times;</span>
+            <img class="modal-image" src="" alt="">
+            <div class="modal-info">
+                <h3 class="modal-title"></h3>
+                <div class="modal-tags"></div>
+            </div>
+        </div>
+    </main>
+    
+    <script src="scripts/app.js"></script>
+</body>
+</html>
